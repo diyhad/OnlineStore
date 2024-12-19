@@ -1,5 +1,21 @@
 
 document.addEventListener('DOMContentLoaded', function () {
+
+
+    document.querySelector('.js-addcart-detail').addEventListener('click', function () {
+        const productId = document.querySelector('.js-name-detail').dataset.productId;
+        console.log('Add to cart button clicked for product ID:', productId);
+    
+        // First, check if there's already a cart in local storage
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+        // Add the new product ID to the cart array
+        cart.push(productId);
+
+        // Save the updated cart back to local storage
+        localStorage.setItem('cart', JSON.stringify(cart));
+    });
+
     // Add click event listeners to all "Quick View" buttons
     document.querySelectorAll('.js-show-modal1').forEach(button => {
         button.addEventListener('click', async function (event) {
@@ -42,6 +58,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Populate product description
         document.querySelector('.stext-102.cl3').innerText = product.description;
+
+        // Save the product ID
+        document.querySelector('.js-name-detail').dataset.productId = product.id;
+
 
         // Populate product images dynamically
         const imageList = document.querySelector('.slick3-dots');
