@@ -1,15 +1,13 @@
-import os
 import ast
-import io
+import os
 
 from fastapi import FastAPI, Depends
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
-from starlette.requests import Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker, Session
-
+from starlette.requests import Request
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -122,67 +120,6 @@ async def get_product_details(product_id: int, db: Session = Depends(get_db)):
     return JSONResponse(content=product_data)
 
 
-# @app.get("/products", response_class=HTMLResponse)
-# async def products_page(request: Request, category: str = None):
-#     return templates.TemplateResponse("product.html", {"request": request, "category": category})
-#
-#
-# @app.get("/api/products", response_class=JSONResponse)
-# async def get_products(category: str = None, db: Session = Depends(get_db)):
-#     query = text("SELECT id, en_name, description, product_type, images FROM items")
-#
-#     if category:
-#         query = text(f"{query} WHERE product_type = :category")
-#
-#     result = db.execute(query, {"category": category} if category else {})
-#     products = result.fetchall()
-#
-#     products_dict = []
-#     for product in products:
-#         images_data = ast.literal_eval(product[4]) if product[4] else []
-#         images_urls = [f"/image/{product[0]}/{i}" for i in range(len(images_data))]
-#
-#         product_data = {
-#             "id": product[0],
-#             "en_name": product[1],
-#             "description": product[2],
-#             "category": product[3],
-#             "images": images_urls,
-#         }
-#         products_dict.append(product_data)
-#
-#     return JSONResponse(content={"products": products_dict})
-
-
-# @app.get("/products", response_class=HTMLResponse)
-# async def products_page(request: Request, category: str = None, db: Session = Depends(get_db)):
-#     query = text("SELECT id, en_name, description, product_type, images FROM items")
-#
-#     if category:
-#         query = text(f"{query} WHERE product_type = :category")
-#
-#     result = db.execute(query, {"category": category} if category else {})
-#     products = result.fetchall()
-#
-#     products_dict = []
-#     for product in products:
-#         images_data = ast.literal_eval(product[4]) if product[4] else []
-#         images_urls = [f"/image/{product[0]}/{i}" for i in range(len(product[4]))]
-#
-#         product_data = {
-#             "id": product[0],
-#             "en_name": product[1],
-#             "description": product[2],
-#             "category": product[3],
-#             "images": images_urls,
-#         }
-#         products_dict.append(product_data)
-#
-#     return templates.TemplateResponse(
-#         "product.html", {"request": request, "products": products_dict, "category": category}
-#     )
-
-
 @app.get("/products", response_class=HTMLResponse)
 async def products_page(
     request: Request,
@@ -193,21 +130,26 @@ async def products_page(
 ):
     offset = (page - 1) * limit
 
-    query = text("SELECT id, en_name, description, product_type, images FROM items")
+    # Mapping from category strings to product_type values
+    category_mapping = {
+        "shampoo": "ШАМПОАН ЗА КОСА",
+        "mask": "МАСКА ЗА КОСА",
+        "conditioner": "БАЛСАМ ЗА КОСА",
+    }
 
-    if category:
-        query = text(f"{query} WHERE product_type = :category")
+    # Convert category string to product_type value if provided
+    product_type = category_mapping.get(category) if category else None
+
+    query = text("SELECT id, en_name, description, product_type, images FROM items WHERE 1=1")
+    params = {"limit": limit, "offset": offset}
+
+    if product_type:
+        query = text(f"{query} AND product_type = :product_type")
+        params["product_type"] = product_type
 
     query = text(f"{query} LIMIT :limit OFFSET :offset")
 
-    result = db.execute(
-        query,
-        (
-            {"category": category, "limit": limit, "offset": offset}
-            if category
-            else {"limit": limit, "offset": offset}
-        ),
-    )
+    result = db.execute(query, params)
     products = result.fetchall()
 
     products_dict = []
@@ -225,10 +167,12 @@ async def products_page(
         products_dict.append(product_data)
 
     # Calculate total number of pages
-    count_query = text("SELECT COUNT(*) FROM items")
-    if category:
-        count_query = text(f"{count_query} WHERE product_type = :category")
-    count_result = db.execute(count_query, {"category": category} if category else {})
+    count_query = text("SELECT COUNT(*) FROM items WHERE 1=1")
+    if product_type:
+        count_query = text(f"{count_query} AND product_type = :product_type")
+        params["product_type"] = product_type
+
+    count_result = db.execute(count_query, params)
     total_items = count_result.scalar()
     total_pages = (total_items + limit - 1) // limit  # Ceiling division
 
