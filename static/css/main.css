@@ -265,6 +265,12 @@ Input, textarea : 14px/1.6 '', Arial, sans-serif;
 }
 
 
+/*==================================================================
+[ Header-Logo ]*/
+  #barrette-logo{
+    color: black;
+    text-transform: uppercase;
+  }
 
 /*==================================================================
 [ Menu ]*/
