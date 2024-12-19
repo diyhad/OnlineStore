@@ -97,7 +97,7 @@ async def get_image(item_id: int, image_index: int, db: Session = Depends(get_db
 
 @app.get("/product/{product_id}", response_class=JSONResponse)
 async def get_product_details(product_id: int, db: Session = Depends(get_db)):
-    query = text("SELECT id, en_name, description, product_type, images FROM items WHERE id = :id")
+    query = text("SELECT id, en_name, short_description, product_type, images FROM items WHERE id = :id")
     result = db.execute(query, {"id": product_id})
     product = result.fetchone()
 
