@@ -79,7 +79,6 @@ async def get_image(item_id: int, image_index: int, db: Session = Depends(get_db
     if images_data is None:
         return HTMLResponse(status_code=404, content="Images not found")
 
-    # The images column now contains paths (as a string, e.g., a list of paths).
     images_list = ast.literal_eval(images_data)
 
     if image_index < 0 or image_index >= len(images_list):
@@ -87,24 +86,23 @@ async def get_image(item_id: int, image_index: int, db: Session = Depends(get_db
 
     image_path = images_list[image_index]
 
-    # Check if the image file exists at the path
     if not os.path.exists(image_path):
         return HTMLResponse(status_code=404, content="Image file not found")
 
-    # Return the image file
     return StreamingResponse(open(image_path, "rb"), media_type="image/png")
 
 
 @app.get("/product/{product_id}", response_class=JSONResponse)
 async def get_product_details(product_id: int, db: Session = Depends(get_db)):
-    query = text("SELECT id, en_name, short_description, product_type, images FROM items WHERE id = :id")
+    query = text(
+        "SELECT id, en_name, short_description, product_type, images FROM items WHERE id = :id"
+    )
     result = db.execute(query, {"id": product_id})
     product = result.fetchone()
 
     if not product:
         return JSONResponse(status_code=404, content={"error": "Product not found"})
 
-    # The images column now contains a string with a list of image paths
     images_data = ast.literal_eval(product[4]) if product[4] else []
 
     images_urls = [f"/image/{product[0]}/{i}" for i in range(len(images_data))]
@@ -130,7 +128,6 @@ async def products_page(
 ):
     offset = (page - 1) * limit
 
-    # Mapping from category strings to product_type values
     category_mapping = {
         "shampoo": "ШАМПОАН ЗА КОСА",
         "mask": "МАСКА ЗА КОСА",
@@ -155,7 +152,6 @@ async def products_page(
         "cream": "КРЕМ ЗА КОСА",
     }
 
-    # Convert category string to product_type value if provided
     product_type = category_mapping.get(category) if category else None
 
     query = text("SELECT id, en_name, description, product_type, images FROM items WHERE 1=1")
@@ -184,7 +180,6 @@ async def products_page(
         }
         products_dict.append(product_data)
 
-    # Calculate total number of pages
     count_query = text("SELECT COUNT(*) FROM items WHERE 1=1")
     if product_type:
         count_query = text(f"{count_query} AND product_type = :product_type")
@@ -204,3 +199,13 @@ async def products_page(
             "total_pages": total_pages,
         },
     )
+
+
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    return templates.TemplateResponse("about.html", {"request": request})
+
+
+@app.get("/contact", response_class=HTMLResponse)
+async def about_page(request: Request):
+    return templates.TemplateResponse("contact.html", {"request": request})

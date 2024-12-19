@@ -2,37 +2,82 @@
 document.addEventListener('DOMContentLoaded', function () {
 
 
+    const cartButton = document.querySelector('.js-show-cart');
+    cartButton.addEventListener('click', function () {
+        populateCartModal();
+    });
+
+    async function populateCartModal() {
+        console.log('Populating the modal');
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        const cartModalContent = document.querySelector('.header-cart-wrapitem');
+        cartModalContent.innerHTML = '';
+
+        for (const productId of cart) {
+            try {
+                const response = await fetch(`/product/${productId}`);
+                const product = await response.json();
+
+                const li = document.createElement('li');
+                li.className = 'header-cart-item flex-w flex-t m-b-12';
+                li.innerHTML = `
+                    <div class="header-cart-item-img">
+                        <img src="${product.images[0]}" alt="${product.en_name}">
+                    </div>
+                    <div class="header-cart-item-txt p-t-8">
+                        <a href="#" class="header-cart-item-name m-b-18 hov-cl1 trans-04">${product.en_name}</a>
+                        <span class="header-cart-item-info">1 x $${product.price}</span>
+                    </div>
+                    <button class="js-remove-from-cart" data-product-id="${product.id}">X</button>
+                `;
+
+                const removeButton = li.querySelector('.js-remove-from-cart');
+                removeButton.addEventListener('click', function () {
+                    const productId = this.dataset.productId;
+                    removeFromCart(productId);
+                });
+
+                cartModalContent.appendChild(li);
+            } catch (error) {
+                console.error(`Error fetching product details for ID ${productId}:`, error);
+            }
+        }
+    }
+
+    function removeFromCart(productId) {
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        cart = cart.filter(id => id !== productId);
+        localStorage.setItem('cart', JSON.stringify(cart));
+        populateCartModal();
+        updateCartCount();
+    }
+
+
     document.querySelector('.js-addcart-detail').addEventListener('click', function () {
         const productId = document.querySelector('.js-name-detail').dataset.productId;
         console.log('Add to cart button clicked for product ID:', productId);
-    
-        // First, check if there's already a cart in local storage
+
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
-        // Add the new product ID to the cart array
         cart.push(productId);
 
-        // Save the updated cart back to local storage
         localStorage.setItem('cart', JSON.stringify(cart));
+
+        updateCartCount()
     });
 
-    // Add click event listeners to all "Quick View" buttons
     document.querySelectorAll('.js-show-modal1').forEach(button => {
         button.addEventListener('click', async function (event) {
             event.preventDefault();
 
-            // Extract product ID from the button's href attribute
             const productId = button.getAttribute('href').split('/').pop();
 
             try {
-                // Fetch product details from the API
                 const response = await fetch(`/product/${productId}`);
                 const product = await response.json();
 
-                // Populate the modal with product details
                 populateModal(product);
 
-                // Show the modal
                 document.querySelector('.js-modal1').classList.add('show-modal1');
             } catch (error) {
                 console.error('Error fetching product details:', error);
@@ -40,34 +85,34 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Function to populate the modal with product details
+
+    function updateCartCount() {
+        let cart = JSON.parse(localStorage.getItem('cart')) || []
+        const cartCountElement = document.querySelector('.js-show-cart')
+        cartCountElement.setAttribute('data-notify', cart.length)
+    }
+
+    updateCartCount()
+
     function populateModal(product) {
         if (!product) return;
 
-        // Clear the previous product's details and images from the modal
         document.querySelector('.slick3-dots').innerHTML = ''; // Clear any existing thumbnails
         document.querySelector('.js-name-detail').innerText = ''; // Clear the product name
         document.querySelector('.mtext-106.cl2').innerText = ''; // Clear the price
         document.querySelector('.stext-102.cl3').innerText = ''; // Clear the description
 
-        // Populate product name
         document.querySelector('.js-name-detail').innerText = product.en_name;
 
-        // Populate product price
         document.querySelector('.mtext-106.cl2').innerText = `$${product.price}`;
 
-        // Populate product description
         document.querySelector('.stext-102.cl3').innerText = product.description;
 
-        // Save the product ID
         document.querySelector('.js-name-detail').dataset.productId = product.id;
 
-
-        // Populate product images dynamically
         const imageList = document.querySelector('.slick3-dots');
         imageList.innerHTML = ''; // Clear any existing images
 
-        // Loop through the product images and add them to the gallery
         product.images.forEach((image, index) => {
             const li = document.createElement('li');
             li.innerHTML = `
@@ -76,47 +121,39 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             imageList.appendChild(li);
 
-            // Add event listener for thumbnails
             li.addEventListener('click', () => {
                 console.log(`Thumbnail clicked: ${image}`);
                 updateActiveThumbnail(index);
                 updateMainImage(image);
             });
 
-            // Set first image as active by default
             if (index === 0) {
                 li.classList.add('slick-active');
                 updateMainImage(image);
             }
         });
 
-        // Function to update the active thumbnail
         function updateActiveThumbnail(activeIndex) {
             document.querySelectorAll('.slick3-dots li').forEach((li, index) => {
                 li.classList.toggle('slick-active', index === activeIndex);
             });
         }
 
-        // Function to update the main image
         function updateMainImage(imageSrc) {
             const mainImage = document.querySelector('.slick3 .slick-slide img'); // Adjust the selector if needed
             mainImage.setAttribute('src', imageSrc);
         }
 
-        // Reinitialize the slick slider if it exists
         reinitializeSlick();
     }
 
-    // Function to reinitialize the slick slider to avoid issues with image changes
     function reinitializeSlick() {
         const slickContainer = document.querySelector('.slick3');
 
-        // Check if slick is already initialized, if so, destroy it
         if (slickContainer && typeof slickContainer.slick === 'function') {
-            $(slickContainer).slick('unslick'); // Destroy existing slick instance
+            $(slickContainer).slick('unslick');
         }
 
-        // Initialize slick slider again
         $(slickContainer).slick({
             arrows: true, // Enable arrows
             dots: true, // Enable dots
@@ -128,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Close the modal when the close button is clicked
     document.querySelector('.js-hide-modal1').addEventListener('click', function () {
         document.querySelector('.js-modal1').classList.remove('show-modal1');
     });
